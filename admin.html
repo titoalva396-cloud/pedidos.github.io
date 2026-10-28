@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+
+        .card-ventas {
+            background: linear-gradient(135deg, #198754, #20c997);
+            color: white;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN -->
+    <div id="pantalla-login" class="d-flex justify-content-center align-items-center min-vh-100">
+        <div class="card shadow-lg p-5" style="max-width: 400px; width: 100%;">
+            <h3 class="text-center mb-4">🔐 Acceso Dueña</h3>
+            <div class="mb-3">
+                <input type="text" id="user" class="form-control" placeholder="Usuario">
+            </div>
+            <div class="mb-3">
+                <input type="password" id="pass" class="form-control" placeholder="Contraseña">
+            </div>
+            <button class="btn btn-primary w-100" onclick="login()">Ingresar</button>
+        </div>
+    </div>
+
+    <!-- PANEL -->
+    <div id="panel-admin" class="d-none">
+        <nav class="navbar navbar-dark bg-dark mb-4">
+            <div class="container">
+                <span class="navbar-brand">👩‍🍳 Panel de Administración</span>
+                <div>
+                    <a href="gestion.html" class="btn btn-outline-light btn-sm me-2">➕ Gestionar Platos</a>
+                    <button class="btn btn-outline-danger btn-sm" onclick="logout()">Salir</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-md-6 col-lg-4 mx-auto">
+                    <div class="card card-ventas shadow-lg text-center p-4">
+                        <h4>📈 Ventas Totales</h4>
+                        <h1 class="display-4 fw-bold" id="ventas-hoy">Bs. 0.00</h1>
+                    </div>
+                </div>
+            </div>
+
+            <h3>📋 Pedidos Recibidos</h3>
+            <div class="card shadow-sm border-0 mt-3">
+                <div class="card-body">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hora</th>
+                                <th>Mesa</th>
+                                <th>Familia</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-pedidos"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function login() {
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+            if (user === 'matilde' && pass === '12345') {
+                document.getElementById('pantalla-login').classList.add('d-none');
+                document.getElementById('panel-admin').classList.remove('d-none');
+                cargarPedidos();
+            } else {
+                alert("Datos incorrectos");
+            }
+        }
+
+        function logout() { window.location.reload(); }
+
+        function cargarPedidos() {
+            const pedidos = JSON.parse(localStorage.getItem('pedidos_qr')) || [];
+            const tabla = document.getElementById('tabla-pedidos');
+            const totalSpan = document.getElementById('ventas-hoy');
+
+            tabla.innerHTML = "";
+            let totalVentas = 0;
+
+            if (pedidos.length === 0) {
+                tabla.innerHTML = '<tr><td colspan="6" class="text-center">No hay pedidos aún.</td></tr>';
+            }
+
+            pedidos.forEach((p, index) => {
+                totalVentas += p.total;
+                let badge = p.estado === 'Pendiente' ? 'bg-warning text-dark' : (p.estado === 'Preparando' ? 'bg-info text-dark' : 'bg-success');
+
+                tabla.innerHTML += `
+                    <tr>
+                        <td>${p.fecha.split(',')[1]}</td>
+                        <td class="fw-bold fs-5">${p.mesa}</td>
+                        <td>${p.apellido}</td>
+                        <td>Bs. ${p.total.toFixed(2)}</td>
+                        <td><span class="badge ${badge}">${p.estado}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" onclick="verDetalle(${index})" data-bs-toggle="modal" data-bs-target="#modalDetalles">🔍 Detalles</button>
+                            ${p.estado === 'Pendiente' ? `<button class="btn btn-sm btn-info" onclick="cambiarEstado(${index}, 'Preparando')">Preparar</button>` : ''}
+                            ${p.estado === 'Preparando' ? `<button class="btn btn-sm btn-success" onclick="cambiarEstado(${index}, 'Entregado')">Entregar</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            totalSpan.innerText = `Bs. ${totalVentas.toFixed(2)}`;
+        }
+
+        function cambiarEstado(index, nuevoEstado) {
+            let pedidos = JSON.parse(localStorage.getItem('pedidos_qr'));
+            pedidos[index].estado = nuevoEstado;
+            localStorage.setItem('pedidos_qr', JSON.stringify(pedidos));
+            cargarPedidos();
+        }
+
+        function verDetalle(index) {
+            let pedidos = JSON.parse(localStorage.getItem('pedidos_qr'));
+            let pedido = pedidos[index];
+            let lista = "";
+
+            pedido.detalles.forEach(d => {
+                lista += `<li class="list-group-item">
+                    <strong>${d.cantidad}x ${d.nombre}</strong> - Bs. ${(d.precio * d.cantidad).toFixed(2)}
+                    ${d.nota ? `<br><small class="text-danger">📝 Nota: ${d.nota}</small>` : ''}
+                </li>`;
+            });
+
+            let modalHTML = `
+                <div class="modal fade" id="modalDetalles" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-dark text-white">
+                                <h5 class="modal-title">Pedido Mesa ${pedido.mesa} - ${pedido.apellido}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body"><ul class="list-group">${lista}</ul></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let oldModal = document.getElementById('modalDetalles');
+            if (oldModal) oldModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

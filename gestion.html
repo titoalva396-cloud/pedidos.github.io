@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionar Menú</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .foto-miniatura {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand">🍔 Gestionar Menú</span>
+            <a href="admin.html" class="btn btn-outline-light btn-sm">⬅ Volver</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white">➕ Nuevo Plato</div>
+                    <div class="card-body">
+                        <form id="form-plato">
+                            <div class="mb-3">
+                                <label class="fw-bold">Nombre:</label>
+                                <input type="text" id="nombre" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold">Descripción:</label>
+                                <textarea id="descripcion" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold">Precio (Bs):</label>
+                                <input type="number" step="0.10" id="precio" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="fw-bold">Foto:</label>
+                                <input type="file" id="foto" class="form-control" accept="image/*" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Guardar Plato</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Foto</th>
+                                    <th>Plato</th>
+                                    <th>Precio</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-platos"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let platos = JSON.parse(localStorage.getItem('platos_qr')) || [];
+
+        function cargarTabla() {
+            const tabla = document.getElementById('tabla-platos');
+            tabla.innerHTML = "";
+            platos.forEach((p, index) => {
+                tabla.innerHTML += `
+                    <tr>
+                        <td><img src="${p.imagen}" class="foto-miniatura"></td>
+                        <td><strong>${p.nombre}</strong><br><small>${p.descripcion}</small></td>
+                        <td>Bs. ${p.precio.toFixed(2)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarPlato(${index})">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('form-plato').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('foto');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const nuevaImagenBase64 = event.target.result;
+
+                    const nuevoPlato = {
+                        id: Date.now(),
+                        nombre: document.getElementById('nombre').value,
+                        descripcion: document.getElementById('descripcion').value,
+                        precio: parseFloat(document.getElementById('precio').value),
+                        imagen: nuevaImagenBase64,
+                        disponible: true
+                    };
+
+                    platos.push(nuevoPlato);
+                    localStorage.setItem('platos_qr', JSON.stringify(platos));
+                    cargarTabla();
+                    this.reset();
+                    alert("Plato guardado con éxito");
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function eliminarPlato(index) {
+            if (confirm("¿Seguro que deseas eliminar este plato?")) {
+                platos.splice(index, 1);
+                localStorage.setItem('platos_qr', JSON.stringify(platos));
+                cargarTabla();
+            }
+        }
+
+        cargarTabla();
+    </script>
+</body>
+
+</html>

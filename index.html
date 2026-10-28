@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido - Pedidos QR</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; }
+        .card-bienvenida { border-radius: 15px; border: none; max-width: 400px; width: 100%; }
+    </style>
+</head>
+<body class="d-flex justify-content-center align-items-center min-vh-100">
+
+    <div class="card card-bienvenida shadow-lg p-5 text-center">
+        <h2 class="mb-3 text-primary">🍽️ ¡Bienvenido!</h2>
+        <p class="text-muted mb-4">Ingresa tus datos para comenzar a pedir.</p>
+
+        <form id="formulario-ingreso">
+            <div class="mb-3 text-start">
+                <label class="form-label fw-bold">Apellido de la familia:</label>
+                <input type="text" class="form-control form-control-lg" id="apellido" placeholder="Ej. Mamani" required>
+            </div>
+            <div class="mb-4 text-start">
+                <label class="form-label fw-bold">Número de Mesa:</label>
+                <input type="number" class="form-control form-control-lg" id="mesa" placeholder="Ej. 3" min="1" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100">Ver el Menú 🍔</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('formulario-ingreso').addEventListener('submit', function(e) {
+            e.preventDefault();
+            sessionStorage.setItem('cliente_apellido', document.getElementById('apellido').value);
+            sessionStorage.setItem('mesa', document.getElementById('mesa').value);
+            window.location.href = 'menu.html';
+        });
+    </script>
+</body>
+</html>

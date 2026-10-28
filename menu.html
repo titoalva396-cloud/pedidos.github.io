@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Digital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-bottom: 80px; }
+        .card-plato img { height: 180px; object-fit: cover; border-radius: 15px 15px 0 0; }
+        .card-plato { border-radius: 15px; border: none; }
+        .precio { font-size: 1.2rem; font-weight: bold; color: #198754; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-primary sticky-top shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">🍽️ Menú</span>
+            <span class="text-white fw-bold" id="info-cliente"></span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row" id="contenedor-platos"></div>
+    </div>
+
+    <button class="btn btn-primary rounded-circle position-fixed shadow-lg" style="bottom: 20px; right: 20px; width: 70px; height: 70px; font-size: 24px; z-index: 1000;" data-bs-toggle="offcanvas" data-bs-target="#carritoPanel">
+        🛒 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="contador-carrito">0</span>
+    </button>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="carritoPanel">
+        <div class="offcanvas-header bg-primary text-white">
+            <h5 class="offcanvas-title">Tu Pedido</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div id="lista-carrito"></div>
+            <hr>
+            <div class="d-flex justify-content-between fw-bold fs-4">
+                <span>Total:</span>
+                <span>Bs. <span id="total-pedido">0.00</span></span>
+            </div>
+            <button class="btn btn-success w-100 mt-3 btn-lg" onclick="enviarPedido()">Confirmar Pedido ✅</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Inicializar platos de prueba si está vacío
+        if (!localStorage.getItem('platos_qr')) {
+            const platosIniciales = [
+                { id: 1, nombre: "Silpancho", descripcion: "Carne, arroz y papa", precio: 25.00, imagen: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500", disponible: true },
+                { id: 2, nombre: "Pique Macho", descripcion: "Carne, papas y cebolla", precio: 35.00, imagen: "https://images.unsplash.com/photo-1600891964092-4316c288032e?q=80&w=500", disponible: true }
+            ];
+            localStorage.setItem('platos_qr', JSON.stringify(platosIniciales));
+        }
+
+        let carrito = [];
+        const apellido = sessionStorage.getItem('cliente_apellido') || "Cliente";
+        const mesa = sessionStorage.getItem('mesa') || "0";
+        document.getElementById('info-cliente').innerText = `Mesa: ${mesa} | Familia: ${apellido}`;
+
+        function cargarPlatos() {
+            const contenedor = document.getElementById('contenedor-platos');
+            const platos = JSON.parse(localStorage.getItem('platos_qr'));
+            contenedor.innerHTML = "";
+
+            platos.filter(p => p.disponible).forEach(plato => {
+                contenedor.innerHTML += `
+                    <div class="col-12 col-md-6 col-lg-4 mb-4">
+                        <div class="card card-plato shadow-sm h-100">
+                            <img src="${plato.imagen}" class="card-img-top" alt="${plato.nombre}">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">${plato.nombre}</h5>
+                                <p class="card-text text-muted small flex-grow-1">${plato.descripcion}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="precio">Bs. ${plato.precio.toFixed(2)}</span>
+                                    <button class="btn btn-outline-primary" onclick="agregarAlCarrito(${plato.id}, '${plato.nombre}', ${plato.precio})">+ Agregar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function agregarAlCarrito(id, nombre, precio) {
+            let item = carrito.find(i => i.id === id);
+            if (item) {
+                item.cantidad++;
+            } else {
+                carrito.push({ id, nombre, precio, cantidad: 1, nota: "" });
+            }
+            actualizarCarritoUI();
+        }
+
+        function actualizarCarritoUI() {
+            const contenedor = document.getElementById('lista-carrito');
+            const contador = document.getElementById('contador-carrito');
+            const totalSpan = document.getElementById('total-pedido');
+            
+            contenedor.innerHTML = "";
+            let total = 0;
+            let items = 0;
+
+            if (carrito.length === 0) contenedor.innerHTML = '<p class="text-muted text-center">El carrito está vacío.</p>';
+
+            carrito.forEach((item, index) => {
+                let subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                items += item.cantidad;
+
+                contenedor.innerHTML += `
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <div class="w-100 me-3">
+                            <h6 class="mb-0">${item.nombre}</h6>
+                            <small class="text-muted">Bs. ${item.precio.toFixed(2)} x ${item.cantidad}</small>
+                            <input type="text" class="form-control form-control-sm mt-2 border-danger" placeholder="📝 Indicación" value="${item.nota}" onchange="actualizarNota(${index}, this.value)">
+                        </div>
+                        <div class="d-flex flex-column align-items-end">
+                            <span class="fw-bold mb-2">Bs. ${subtotal.toFixed(2)}</span>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarDelCarrito(${index})">X</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            totalSpan.innerText = total.toFixed(2);
+            contador.innerText = items;
+        }
+
+        function actualizarNota(index, nota) {
+            carrito[index].nota = nota.trim();
+        }
+
+        function eliminarDelCarrito(index) {
+            carrito.splice(index, 1);
+            actualizarCarritoUI();
+        }
+
+        function enviarPedido() {
+            if (carrito.length === 0) return alert("El carrito está vacío.");
+
+            const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            
+            const nuevoPedido = {
+                id: Date.now(),
+                mesa: mesa,
+                apellido: apellido,
+                fecha: new Date().toLocaleString(),
+                total: total,
+                estado: "Pendiente",
+                detalles: carrito
+            };
+
+            let pedidosGuardados = JSON.parse(localStorage.getItem('pedidos_qr')) || [];
+            pedidosGuardados.push(nuevoPedido);
+            localStorage.setItem('pedidos_qr', JSON.stringify(pedidosGuardados));
+
+            alert("¡Pedido enviado con éxito! 🎉");
+            window.location.href = "index.html";
+        }
+
+        cargarPlatos();
+    </script>
+</body>
+</html>
